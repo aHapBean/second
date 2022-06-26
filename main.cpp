@@ -2,11 +2,11 @@
 #include <iostream>
 #include <cstring>
 #include <fstream>
+//cpu.hpp
+
+#include "my_cpu.hpp"
 void init(cpu * &RISCV){
-    string s;
-    while(std::cin >> s){
-        RISCV->mem->init(s);
-    }
+    RISCV->init(std::cin);
 }
 int main(){
     /*
@@ -17,7 +17,6 @@ int main(){
    
     cpu *RISCV = new cpu;
     init(RISCV);
-    RISCV->run();
-
+	RISCV->DEBUGrun();
     return 0;
 }
