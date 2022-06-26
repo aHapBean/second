@@ -1,7 +1,4 @@
-//RISCV.cpp
-#include <iostream>
-#include <cstring>
-#include <fstream>
+
 //cpu.hpp
 
 #ifndef CPU_HPP
@@ -852,20 +849,3 @@ void printID_EX_Buffer(ID_EX_buffer &t){
 
 };
 #endif //CPP_HPP
-
-void init(cpu * &RISCV){
-    std::string s;
-    //RISCV->mem->init(s);
-    RISCV->init(std::cin);
-}
-int main(){
-    /*
-    std::string inputString;
-    std::cin>>inputString;
-    fstream inputfile(inputString);
-    */
-    cpu *RISCV = new cpu;
-    init(RISCV);
-	RISCV->DEBUGrun();
-    return 0;
-}
