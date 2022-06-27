@@ -1,4 +1,5 @@
-
+//decided by Path !
+//namely the Path is responsible for find the include lib
 //cpu.hpp
 
 #ifndef CPU_HPP
@@ -7,9 +8,16 @@
 #define funct3B 0b00000000000000000111000000000000   //define funct 3
 //0b00000000'00000000'01110000'00000000
 #include <bits/stdc++.h>
+
 #define fdb std::cout<<"FUCK"<<std::endl;
 using u32 = unsigned int;
 using u8  = unsigned char;
+
+
+//建立五个pipeline,然后流水执行？
+//对每一个过程传入对象，可以有一个计数的单位！
+//有道理，独立出一个stage hpp !
+//根据示意图更改buffer的值，然后上OJ测试
 
 enum OPflag {
     LUI,
@@ -61,21 +69,23 @@ enum OPflag {
 //int 和进制扯不上关系
 class cpu{
 //buffer
+public:
     struct IF_ID_buffer {
         u32 code,PC;
     }IF_ID;
 
     struct ID_EX_buffer {   //ID give the value to it
-        u32 opcode,rd,imm,rs1,rs2,PC,shamt;
-        u32 regd,reg1,reg2; //代表的是value
-        OPflag opflag;      //category
-        ID_EX_buffer(){opcode = rd = imm = rs1 = rs2 = 0;}
+        u32 rd,rs1,rs2;     //编号
+        u32 PC;                 
+        u32 regd,reg1,reg2,imm,shamt; //操作数
+        OPflag opflag;      //OPflag
+        ID_EX_buffer(){rs1 = rs2 = rd = imm = 0;}
     }ID_EX;
 
     struct EX_MEM_buffer {
         u32 esc_flag;
-        u32 opcode,rd,imm,rs1,rs2,reg2;     //MEM need flag ,dest ,rd ,regd
-        u32 regd,PC;
+        u32 rd,rs1,rs2;     //TO delete !     
+        u32 regd,PC,imm,reg2;
         u32 ld_dest,st_dest,ld_flag,st_flag;//打标记，看是否有内存读写操作
         OPflag opflag;
     }EX_MEM;
@@ -85,8 +95,8 @@ class cpu{
         u32 regd,rd,PC;
         u32 esc_flag;
     }MEM_WB;
+
 public:
-	//Memory *mem;
 	u8 mem[500000];
 private:
     u32 reg[32];
@@ -94,7 +104,6 @@ private:
     u32 sz;
 public:
 cpu(){
-    //mem = new memory<500000,u32>;
     memset(mem,0,sizeof(mem));
     memset(reg,0,sizeof(reg));
     PC = 0;
@@ -137,19 +146,17 @@ void DEBUGrun(){
 }
 
 /*Instuction_Fetch*/
-void IF(){//pc处取信息放入IF/ID buffer
+void IF(){
     //in the mem the info is stored in the form of byte  |u8 !
     u32 code = 0b0;
 	IF_ID.code = 0b0;
     for(int i = 0;i < 4; ++i){
-        code |= (mem[PC + 3 - i] & 0b11111111);//8 1
-        //printf("%d ",mem[PC + 3 - i]);
-        if(i != 3)code <<= 8;//不能左移四次，因为第一次不用移！！ 
+        code |= (mem[PC + 3 - i] & 0b11111111);//机器内部其实就是二进制形式的简单赋值，16进制数在内存也以0 1 形式体现
+        if(i != 3)code <<= 8;       //     不能左移四次，因为第一次不用移！！ 
     }//逆读
-    PC += 4;//
+    PC += 4;
     IF_ID.PC = PC;
     IF_ID.code = code;
-    //printf("%d %d",code,0x00020137);
 }
 
 
@@ -162,38 +169,28 @@ void ID(){
     //give value to the opflag
     switch (opcode) {
         case 0b0110111:
-        	//std::cout<<"LUI";
             opflag = LUI;break;
         case 0b0010111:
-        	//std::cout<<"AUIPC";
             opflag = AUIPC;break;
         case 0b1101111:
-        	//std::cout<<"JAL";
             opflag = JAL;break;
         case 0b1100111://it has a funct3 用处？？仅用于区分吗
-            //std::cout<<"JALR";
 			opflag = JALR;break;
         case 0b1100011:
             funct3 = (code & (funct3B));// funct3
             funct3 >>= 12;//?
             switch (funct3) {
                 case 0b000:
-                	//std::cout<<"BEQ";
                     opflag = BEQ;break;
                 case 0b001:
-                	//std::cout<<"BNE";
                     opflag = BNE;break;
                 case 0b100:
-                	//std::cout<<"BLT";
                     opflag = BLT;break;
                 case 0b101:
-                	//std::cout<<"BGE";
                     opflag = BGE;break;
                 case 0b110:
-                	//std::cout<<"BLTU";
                     opflag = BLTU;break;
                 case 0b111:
-                	//std::cout<<"BGEU";
                     opflag = BGEU;break;
             }
             break;
@@ -202,19 +199,14 @@ void ID(){
             funct3 >>= 12;
             switch (funct3) {
                 case 0b000:
-                	//std::cout<<"LB";
                     opflag = LB;break;
                 case 0b001:
-                	//std::cout<<"LH";
                     opflag = LH;break;
                 case 0b010:
-                	//std::cout<<"LW";
                     opflag = LW;break;
                 case 0b100:
-                	//std::cout<<"LBU";
                     opflag = LBU;break;
                 case 0b101:
-                	//std::cout<<"LHU";
                     opflag = LHU;break;
             }
             break;
@@ -223,13 +215,10 @@ void ID(){
             funct3 >>= 12;
             switch (funct3) {
                 case 0b000:
-                	//std::cout<<"SB";
                     opflag = SB;break;
                 case 0b001:
-                	//std::cout<<"SH";
                     opflag = SH;break;
                 case 0b010:
-                	//std::cout<<"SW";
                     opflag = SW;break;
             }
             break;
@@ -238,35 +227,26 @@ void ID(){
             funct3 >>= 12;
             switch (funct3) {
                 case 0b000:
-                	//std::cout<<"ADDI";
                     opflag = ADDI;break;
                 case 0b010:
-                	//std::cout<<"SLTI";
                     opflag = SLTI;break;
                 case 0b011:
-                	//std::cout<<"SLTIU";
                     opflag = SLTIU;break;
                 case 0b100:
-                	//std::cout<<"XORI";
                     opflag = XORI;break;
                 case 0b110:
-                	//std::cout<<"ORI";
                     opflag = ORI;break;
                 case 0b111:
-                	//std::cout<<"ANDI";
                     opflag = ANDI;break;
                 case 0b001:
-                	//std::cout<<"SLLI";
                     opflag = SLLI;break;//it has funct7
                 case 0b101:
                     u32 funct7 = (code & 0b11111110000000000000000000000000);//0b11111110'00000000'00000000'00000000
                     funct7 >>= 25;
                     switch (funct7) {
                         case 0b0000000:
-                        	//std::cout<<"SRLI";
                             opflag = SRLI;break;
                         case 0b0100000:
-                        	//std::cout<<"SRAI";
                             opflag = SRAI;break;
                     }
                     break;
@@ -281,47 +261,37 @@ void ID(){
                         funct7 >>= 25;
                         switch (funct7) {
                             case 0b0000000:
-                            	//std::cout<<"ADD";
                                 opflag = ADD;break;
                             case 0b0100000:
-                            	//std::cout<<"SUB";
                                 opflag = SUB;break;
                         }
                         break;
                 case 0b001:
-                	//std::cout<<"SLL";
                     opflag = SLL;break;
                 case 0b010:
-                	//std::cout<<"SLT";
                     opflag = SLT;break;
                 case 0b011:
-                	//std::cout<<"SLTU";
                     opflag = SLTU;break;
                 case 0b100:
-                	//std::cout<<"XOR";
                     opflag = XOR;break;
                 case 0b101:
                     funct7 = (code & 0b11111110000000000000000000000000);
                         funct7 >>= 25;
                         switch (funct7) {
                             case 0b0000000:
-                            	//std::cout<<"SRL";
                                 opflag = SRL;break;
                             case 0b0100000:
-                            	//std::cout<<"SRA";
                                 opflag = SRA;break;
                         }
                         break;
                 case 0b110:
-                	//std::cout<<"OR";
                     opflag = OR;break;
                 case 0b111:
-                	//std::cout<<"AND";
                     opflag = AND;break;
             }
             break;
     }
-    //printf("\n");
+    
     printOP(opflag);
 
     u32 rd = 0b0,rs1 = 0b0,rs2 = 0b0,imm = 0b0,flag = 0b0,shamt = 0b0;
@@ -462,26 +432,26 @@ void ID(){
 
     //正确性检验
     //这个地方应该有个shamt才对！！！！
+
     ID_EX.opflag = opflag;
     ID_EX.imm = imm;
     ID_EX.rd = rd;
     ID_EX.rs1 = rs1;
-    ID_EX.rs2 = rs2;
+    ID_EX.rs2 = rs2;    //为了data hazard做准备
     ID_EX.opflag = opflag;
-    ID_EX.opcode = opcode;
     ID_EX.shamt = shamt;
 
     ID_EX.regd = reg[rd];
     ID_EX.reg1 = reg[rs1];
     ID_EX.reg2 = reg[rs2];
     
-    ID_EX.PC = IF_ID.PC;//
+    ID_EX.PC = IF_ID.PC;
     printID_EX_Buffer(ID_EX);
 }
 
 
     /*Execute*/
-void EX(){
+void EX(){  //对全局PC进行操作
     //ID_EX_buffer
     OPflag opflag = ID_EX.opflag;
     u32 rd = ID_EX.rd,
@@ -496,20 +466,19 @@ void EX(){
     EX_MEM.esc_flag = 0;
 
     switch (opflag) {
-        case LUI:       //load upper imm
+        case LUI:       
             //fdb
             regd = imm;break;
-        case AUIPC:     //add unsigned imm to PC  
+        case AUIPC:      
             //fdb
             regd = (PC - 4) + imm;//  change ! PC -= 4;PC += imm;break;
             break;          //change !
-        case JAL:       //jump and link 
+        case JAL:       
             //fdb
             PC -= 4;regd = PC + 4;PC += imm;break;          //下一个地址链接到regd中，而你静态预测已经是默认+4 ，，YC ! !
         case JALR:      
             //fdb
-            PC -= 4;regd = PC + 4;PC = reg1 + imm;
-			//printf("JALR INFO: PC: %d,regd : %d, imm: %d \n",PC,regd,imm);
+            PC -= 4;regd = PC + 4;PC = reg1 + imm;          //这个PC是全局PC!
 			break;            //*
         case BEQ:
             //fdb
@@ -627,7 +596,7 @@ void EX(){
             break;
     }
     
-	EX_MEM.ld_dest = ld_dest;EX_MEM.st_flag = st_flag;//FUCKKKKKKKKKKKKKKKKKKK
+	EX_MEM.ld_dest = ld_dest;EX_MEM.st_flag = st_flag;              //FUCKKKKKKKKKKKKKKKKKKK
     EX_MEM.ld_flag = ld_flag;EX_MEM.st_dest = st_dest;
     EX_MEM.regd = regd;EX_MEM.opflag = opflag;EX_MEM.rd = rd;
     EX_MEM.rs1 = rs1;EX_MEM.rs2 = rs2;//no opcode ! 
@@ -648,12 +617,6 @@ void MEM(){// L S
         PC = EX_MEM.PC;     //*
     u32 tmp;
     
-    /* 
-	if(st_flag)//fdb
-	if(st_flag)//fdb
-	if(st_flag)//fdb
-	*/
-	
     if(ld_flag){
         //读内存
         switch (opflag) {
@@ -673,7 +636,6 @@ void MEM(){// L S
                 break;
 
             case LW:
-				//printf("FUCKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");   √ 
                 regd = 0b0;
                 for(int i = 0;i < 4; ++i){//右边的先下来 
                     regd |= mem[ld_dest + 3 - i];       
@@ -694,13 +656,11 @@ void MEM(){// L S
 	if(st_flag) {
         switch (opflag) {
             case SB:
-            	//printf("FUCKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
                 tmp = 0b0;tmp = (reg2 & 0b11111111);//取后八位
                 mem[st_dest] = (u8)tmp;
                 break;
 
             case SH:
-            	//printf("FUCKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
                 tmp = 0b0;tmp = (reg2 & 0b1111111111111111);//取后16位
                 //右边放在内存左边
 				mem[st_dest] = (u8)(tmp);tmp >>= 8;
@@ -708,9 +668,6 @@ void MEM(){// L S
                 break;
                 
             case SW:
-            	//printf("ST_dest: %d\n",st_dest);
-            	//printf("FUCKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
-            	//右边放在内存左边？ 
                 tmp = 0b0;tmp = (reg2);             //取后16位
                 for(int i = 0;i < 4; ++i){
                     mem[st_dest + i] = (u8)(tmp);
@@ -739,15 +696,14 @@ void WB(){
             break;
         default:
             if (esc_flag) {     //PC跳了以后是不是不用PC += 4;特判？
-                reg[rd] = regd;//???需要存储？？
-                //printf("REG ra: %d \n\n",reg[1]);
+                //reg[rd] = regd;//???需要存储？？ no need to store
+                //actually it doesn't matters
                 printf("%d\n",(regd & 255u));
                 return ;
             }
             reg[rd] = regd;
     }
-    reg[0] = 0;//???
-    //printf("REG ra: %d \n\n",reg[1]);
+    reg[0] = 0;//       big fault!
 }
 
 void printOP(OPflag flag){
